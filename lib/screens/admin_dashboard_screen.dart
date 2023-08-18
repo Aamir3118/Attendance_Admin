@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -8,35 +9,121 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  List<String> dashboardItemList = ["Faculty", "Admin", "Course", "Subject"];
+  //List<String> dashboardItemList = ["Faculty", "Admin", "Course", "Subject"];
+  List<Map<String, dynamic>> dashboardItemList = [
+    {"title": "Faculty", "collection": "faculties"},
+    {"title": "Admin", "collection": "Admin"},
+    {"title": "Course", "collection": "courses"},
+    {"title": "Subject", "collection": "subjects"},
+  ];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: GridView(
-        padding: const EdgeInsets.all(25.0),
+        padding: const EdgeInsets.all(12.0),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 4 / 3,
-            crossAxisSpacing: 20,
-            mainAxisSpacing: 20),
+          crossAxisCount: 2,
+          childAspectRatio: 4 / 3,
+          crossAxisSpacing: 20,
+          mainAxisSpacing: 20,
+        ),
         children: dashboardItemList
-            .map((itemData) => Container(
-                  padding: EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    gradient: LinearGradient(colors: [
-                      Colors.blue.shade50.withOpacity(0.7),
-                      Colors.blue.shade50
-                    ], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-                  ),
-                  child: Text(
-                    itemData,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                  ),
-                ))
+            .map(
+              (itemData) => FutureBuilder<int>(
+                future: _getCollectionItemCount(itemData['collection']),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                        child:
+                            CircularProgressIndicator()); // Show loading indicator while fetching data
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    final itemCount = snapshot.data ?? 0;
+                    return Container(
+                      padding: EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(15),
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blue.shade50.withOpacity(0.7),
+                            Colors.blue.shade50
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            itemData['title'],
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            itemCount.toString(), // Display the item count
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 30,
+                                color: Colors.black54,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+              ),
+            )
             .toList(),
       ),
     );
   }
+
+  Future<int> _getCollectionItemCount(String collectionName) async {
+    try {
+      if (collectionName == 'courses') {
+        QuerySnapshot snapshot =
+            await FirebaseFirestore.instance.collection(collectionName).get();
+        int totalCount = 1;
+
+        for (QueryDocumentSnapshot courseDoc in snapshot.docs) {
+          String courseId = courseDoc.id;
+          print("Id: $courseId");
+          QuerySnapshot courseSubjectsSnapshot = await FirebaseFirestore
+              .instance
+              .collection('subjects')
+              .doc(courseId)
+              .collection("MCA")
+              .get();
+          totalCount += courseSubjectsSnapshot.docs.length;
+        }
+
+        return totalCount;
+      } else {
+        QuerySnapshot snapshot =
+            await FirebaseFirestore.instance.collection(collectionName).get();
+        return snapshot.docs.length;
+      }
+    } catch (error) {
+      print('Error fetching collection count: $error');
+      return 0;
+    }
+  }
+
+  // Future<int> _getCollectionItemCount(String collectionName) async {
+  //   try {
+  //     QuerySnapshot snapshot =
+  //         await FirebaseFirestore.instance.collection(collectionName).get();
+  //     return snapshot.docs.length;
+  //   } catch (error) {
+  //     print('Error fetching collection count: $error');
+  //     return 0;
+  //   }
+  // }
 }
