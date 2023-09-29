@@ -2,6 +2,7 @@ import 'package:attendance_admin/manage/add_division_screen.dart';
 import 'package:attendance_admin/manage/add_faculty_screen.dart';
 import 'package:attendance_admin/manage/add_students_screen.dart';
 import 'package:attendance_admin/manage/add_subjects_screen.dart';
+import 'package:attendance_admin/manage/manage_faculty.dart';
 import 'package:flutter/material.dart';
 
 import '../manage/add_courses_screen.dart';
@@ -19,7 +20,8 @@ class _ManageScreenState extends State<ManageScreen> {
     'Add Students',
     'Add Course',
     'Add Subjects',
-    'Add Division'
+    'Add Division',
+    'Manage Faculty'
   ];
   @override
   Widget build(BuildContext context) {
@@ -65,6 +67,10 @@ class _ManageScreenState extends State<ManageScreen> {
       case 4:
         Navigator.push(context,
             MaterialPageRoute(builder: (context) => AddDivisionScreen()));
+        break;
+      case 5:
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => ManageFaculty()));
         break;
     }
   }

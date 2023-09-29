@@ -28,6 +28,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           mainAxisSpacing: 20,
         ),
         children: dashboardItemList
+            .where((itemData) => _collectionExists(itemData['collection']))
             .map(
               (itemData) => FutureBuilder<int>(
                 future: _getCollectionItemCount(itemData['collection']),
@@ -85,23 +86,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  bool _collectionExists(String collectionName) {
+    // Check if the collection exists in Firestore
+    // You can use Firebase's `collection(collectionName).get()` and check for errors
+    // If it exists, return true; otherwise, return false
+
+    return true;
+  }
+
   Future<int> _getCollectionItemCount(String collectionName) async {
     try {
       if (collectionName == 'courses') {
         QuerySnapshot snapshot =
             await FirebaseFirestore.instance.collection(collectionName).get();
-        int totalCount = 1;
+        return snapshot.docs.length;
+      } else if (collectionName == 'subjects') {
+        // Assuming you want the total count of subjects across all courses
+        QuerySnapshot courseSnapshot =
+            await FirebaseFirestore.instance.collection('courses').get();
+        int totalCount = 0;
 
-        for (QueryDocumentSnapshot courseDoc in snapshot.docs) {
+        for (QueryDocumentSnapshot courseDoc in courseSnapshot.docs) {
           String courseId = courseDoc.id;
-          print("Id: $courseId");
-          QuerySnapshot courseSubjectsSnapshot = await FirebaseFirestore
-              .instance
-              .collection('subjects')
+          String courseName = courseDoc['course_name'];
+
+          QuerySnapshot subjectSnapshot = await FirebaseFirestore.instance
+              .collection(collectionName)
               .doc(courseId)
-              .collection("MCA")
+              .collection(courseName)
               .get();
-          totalCount += courseSubjectsSnapshot.docs.length;
+
+          totalCount += subjectSnapshot.docs.length;
         }
 
         return totalCount;
@@ -115,6 +130,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return 0;
     }
   }
+
+  // Future<int> _getCollectionItemCount(String collectionName) async {
+  //   try {
+  //     if (collectionName == 'courses') {
+  //       QuerySnapshot snapshot =
+  //           await FirebaseFirestore.instance.collection(collectionName).get();
+  //       int totalCount = 1;
+
+  //       for (QueryDocumentSnapshot courseDoc in snapshot.docs) {
+  //         String courseId = courseDoc.id;
+  //         print("Id: $courseId");
+  //         QuerySnapshot courseSubjectsSnapshot = await FirebaseFirestore
+  //             .instance
+  //             .collection('subjects')
+  //             .doc(courseId)
+  //             .collection("MCA")
+  //             .get();
+  //         totalCount += courseSubjectsSnapshot.docs.length;
+  //       }
+
+  //       return totalCount;
+  //     } else {
+  //       QuerySnapshot snapshot =
+  //           await FirebaseFirestore.instance.collection(collectionName).get();
+  //       return snapshot.docs.length;
+  //     }
+  //   } catch (error) {
+  //     print('Error fetching collection count: $error');
+  //     return 0;
+  //   }
+  // }
 
   // Future<int> _getCollectionItemCount(String collectionName) async {
   //   try {
