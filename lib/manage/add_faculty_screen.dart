@@ -24,66 +24,99 @@ class _AddFacultyScreenState extends State<AddFacultyScreen> {
   var isLoading = false;
 
   FirebaseAuth user = FirebaseAuth.instance;
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _usernameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text(
-          "Add Faculty",
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                textFormField(_usernameController, "Enter Username", false,
-                    TextInputType.name, (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter username';
-                  } else if (value.length <= 5) {
-                    return "Username length should greater than 5";
-                  }
-                  // You can add more email validation checks here
-                  return null;
-                }, context, Icons.person_outline),
-                const SizedBox(
-                  height: 10,
-                ),
-                textFormField(_emailController, "Enter Email", false,
-                    TextInputType.emailAddress, (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter an email';
-                  }
-                  // You can add more email validation checks here
-                  return null;
-                }, context, Icons.email_outlined),
-                const SizedBox(
-                  height: 10,
-                ),
-                PasswordField(
-                    controller: _passwordController,
-                    hint: "Enter Password",
-                    inputType: TextInputType.text,
-                    validation: (value) {
+    return WillPopScope(
+      onWillPop: () async {
+        // Handle the back button press here, if needed
+        // Return true to allow popping, or false to prevent it.
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (context) => TabsScreen()));
+        // Navigator.of(context).pop();
+        return true;
+      },
+      child: GestureDetector(
+        onTap: () {
+          FocusManager.instance.primaryFocus?.unfocus();
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            centerTitle: true,
+            title: const Text(
+              "Add Faculty",
+              style: TextStyle(color: Colors.white),
+            ),
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back,
+                color: Colors.white,
+              ), // Use an icon for the back button
+              onPressed: () {
+                // Handle the appbar back button press
+                Navigator.of(context)
+                    .pop(); // Navigate back to the previous screen
+              },
+            ),
+          ),
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    textFormField(_usernameController, "Enter Username", false,
+                        TextInputType.name, (value) {
                       if (value!.isEmpty) {
-                        return 'Please enter a password';
+                        return 'Please enter username';
+                      } else if (value.length <= 5) {
+                        return "Username length should greater than 5";
                       }
                       // You can add more email validation checks here
                       return null;
-                    },
-                    context: context),
-                const SizedBox(
-                  height: 15,
+                    }, context, Icons.person_outline),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    textFormField(_emailController, "Enter Email", false,
+                        TextInputType.emailAddress, (value) {
+                      if (value!.isEmpty) {
+                        return 'Please enter an email';
+                      }
+                      // You can add more email validation checks here
+                      return null;
+                    }, context, Icons.email_outlined),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    PasswordField(
+                        controller: _passwordController,
+                        hint: "Enter Password",
+                        inputType: TextInputType.text,
+                        validation: (value) {
+                          if (value!.isEmpty) {
+                            return 'Please enter a password';
+                          }
+                          // You can add more email validation checks here
+                          return null;
+                        },
+                        context: context),
+                    const SizedBox(
+                      height: 15,
+                    ),
+                    CustomWidgets.loginButton(
+                        context, addFaculty, isLoading, "Add Faculty")
+                  ],
                 ),
-                CustomWidgets.loginButton(
-                    context, addFaculty, isLoading, "Add Faculty")
-              ],
+              ),
             ),
           ),
         ),
@@ -92,6 +125,7 @@ class _AddFacultyScreenState extends State<AddFacultyScreen> {
   }
 
   Future<void> addFaculty() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_formKey.currentState!.validate()) {
       setState(() {
         isLoading = true;
@@ -130,9 +164,18 @@ class _AddFacultyScreenState extends State<AddFacultyScreen> {
 
         showDialog(
           context: context,
-          builder: (context) => const AlertDialog(
-            title: Text("Success"),
-            content: Text("faculty added successfully."),
+          builder: (context) => AlertDialog(
+            title: const Text("Success"),
+            content: const Text("faculty added successfully."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.popUntil(
+                      context, ModalRoute.withName('/addFaculty'));
+                },
+                child: const Text('Ok'),
+              ),
+            ],
           ),
         );
       } on FirebaseAuthException catch (error) {

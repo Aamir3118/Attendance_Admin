@@ -49,8 +49,7 @@ class _ManageScreenState extends State<ManageScreen> {
   void _onListItemTapped(int index) {
     switch (index) {
       case 0:
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => AddFacultyScreen()));
+        Navigator.pushNamed(context, '/addFaculty');
         break;
       case 1:
         Navigator.push(context,

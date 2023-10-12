@@ -82,6 +82,13 @@ class _AddSubjectsScreenState extends State<AddSubjectsScreen> {
                       _selectedCourse = selctedcourse;
                     });
                   },
+                  validator: (val) {
+                    if (val == null) {
+                      return "Please select course";
+                    }
+
+                    return null;
+                  },
                 ),
                 const SizedBox(
                   height: 20,
@@ -128,7 +135,51 @@ class _AddSubjectsScreenState extends State<AddSubjectsScreen> {
             .get();
         //String subCollectionPath = 'courses/$selectedCourse/subjects';
         if (courseQuerySnapshot.docs.isNotEmpty) {
-          selectedCourseId = courseQuerySnapshot.docs[0].id;
+          //selectedCourseId = courseQuerySnapshot.docs[0].id;
+          String courseId = courseQuerySnapshot.docs[0].id;
+          CollectionReference subCollectionRef = FirebaseFirestore.instance
+              .collection("courses")
+              .doc(courseId)
+              .collection("subjects");
+          QuerySnapshot querySnapshot = await subCollectionRef
+              .where('subject_name', isEqualTo: subjectName)
+              .get();
+          if (querySnapshot.docs.isNotEmpty) {
+            setState(() {
+              isLoading = false;
+            });
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text("Subject Already Added"),
+                content: Text("The subject '$subjectName' is already added."),
+              ),
+            );
+          } else {
+            String subjectDocumentId = subCollectionRef.doc().id;
+            DocumentReference newSubjectDocRef =
+                subCollectionRef.doc(subjectDocumentId);
+
+            // Store the course data in the courses collection
+            await newSubjectDocRef.set({
+              'subject_name': subjectName,
+              'senderid': adminUid,
+              'subjectId': subjectDocumentId,
+            });
+
+            setState(() {
+              isLoading = false;
+            });
+
+            // Show a success message to the user
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text("Success"),
+                content: Text("Subject '$subjectName' added successfully."),
+              ),
+            );
+          }
         } else {
           setState(() {
             isLoading = false;
@@ -140,55 +191,6 @@ class _AddSubjectsScreenState extends State<AddSubjectsScreen> {
               title: Text("Course Not Found"),
               content:
                   Text("The selected course '$selectedCourse' was not found."),
-            ),
-          );
-          return;
-        }
-        CollectionReference subCollectionRef = FirebaseFirestore.instance
-            .collection("subjects")
-            .doc(selectedCourseId)
-            .collection(selectedCourse);
-        QuerySnapshot querySnapshot = await subCollectionRef
-            .where('subject_name', isEqualTo: subjectName)
-            .get();
-
-        // Store the course data in the courses collection
-        //FirebaseAuth auth = FirebaseAuth.instance;
-        if (querySnapshot.docs.isNotEmpty) {
-          // A course with the same name exists, show an alert
-          setState(() {
-            isLoading = false;
-          });
-
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text("Subject Already Added"),
-              content: Text("The subject '$subjectName' is already added."),
-            ),
-          );
-        } else {
-          String subjectDocumentId = subCollectionRef.doc().id;
-          DocumentReference newSubjectDocRef =
-              subCollectionRef.doc(subjectDocumentId);
-
-          // Store the course data in the courses collection
-          await newSubjectDocRef.set({
-            'subject_name': subjectName,
-            'senderid': adminUid,
-            'subjectId': subjectDocumentId,
-          });
-
-          setState(() {
-            isLoading = false;
-          });
-
-          // Show a success message to the user
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text("Success"),
-              content: Text("Subject '$subjectName' added successfully."),
             ),
           );
         }

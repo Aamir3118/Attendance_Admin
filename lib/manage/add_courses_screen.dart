@@ -64,9 +64,8 @@ class _AddCoursesScreenState extends State<AddCoursesScreen> {
           isLoading = true;
         });
         String? adminUid = AuthService().getCurrentUserUID();
-        String courseName = _courseController.text
-            .trim()
-            .toUpperCase(); // Get the entered course name
+        String courseName =
+            _courseController.text.trim(); // Get the entered course name
         // Normalize the entered course name to lowercase
         // String courseNameLower = courseName.toLowerCase();
         // String courseNameUpper = courseName.toUpperCase();

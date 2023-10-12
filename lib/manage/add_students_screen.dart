@@ -26,7 +26,10 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
   // List<String> semesterList = ['Sem1', 'Sem2', 'Sem3'];
   // void _uploadFile() async {}
   List<Map<String, dynamic>> excelData = [];
-  var isLoading = false;
+  var isLoadingFile = false;
+  var isLoadingUpload = false;
+  final _formKey = GlobalKey<FormState>();
+  String? selectedExcelFileName;
   String? _selectedCourse;
   String? _selectedDiv;
   List<String> courseNames = [];
@@ -72,11 +75,14 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
       type: FileType.custom,
       allowedExtensions: ['xls', 'xlsx'],
     );
-
+    setState(() {
+      isLoadingFile = true;
+    });
     if (result != null &&
         result.files.isNotEmpty &&
         result.files.single.path != null) {
       try {
+        selectedExcelFileName = result.files.first.name;
         String filePath = result.files.single.path!;
         final file = File(filePath);
         //OpenFile.open(filePath);
@@ -122,6 +128,9 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
               content: Text("The selected Excel file is empty."),
             ),
           );
+          setState(() {
+            isLoadingFile = false;
+          });
         }
       } catch (e) {
         showDialog(
@@ -132,11 +141,22 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                 Text("An error occurred while reading the Excel file: \n$e"),
           ),
         );
+        setState(() {
+          isLoadingFile = false;
+        });
       }
     }
   }
 
   Future<void> _uploadData() async {
+    FocusManager.instance.primaryFocus!.unfocus();
+    if (_formKey.currentState?.validate() == false ||
+        selectedExcelFileName == null) {
+      return;
+    }
+    setState(() {
+      isLoadingUpload = true;
+    });
     String selectedCourse = _selectedCourse!;
     String selectedDiv = _selectedDiv!;
     DateTime startDate = _selectedStartDate!;
@@ -157,17 +177,27 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
             .where('EnrollmentNo', isEqualTo: enrollmentNo)
             .where('StartDate', isEqualTo: startDate)
             .where('EndDate', isEqualTo: endDate)
+            .where('ExcelFileName', isEqualTo: selectedExcelFileName)
             .get();
 
         if (existingStudent.docs.isNotEmpty) {
+          String duplicateFileName =
+              existingStudent.docs.first.get('ExcelFileName');
+          showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                    title: Text("File Already Exists"),
+                    content: Text(
+                        "The file '$duplicateFileName' has already been added."),
+                  ));
           // Update the existing document
-          DocumentReference studentDocRef =
-              existingStudent.docs.first.reference;
+          // DocumentReference studentDocRef =
+          //     existingStudent.docs.first.reference;
 
-          await studentDocRef.update({
-            'RollNo': rowData['RollNo'] ?? '',
-            'Name': rowData['Name'] ?? '',
-          });
+          // await studentDocRef.update({
+          //   'RollNo': rowData['RollNo'] ?? '',
+          //   'Name': rowData['Name'] ?? '',
+          // });
         } else {
           // Create a new student document using the enrollment number as the document ID
           DocumentReference studentDocRef =
@@ -177,8 +207,9 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
             'RollNo': rowData['RollNo'] ?? '',
             'EnrollmentNo': enrollmentNo,
             'Name': rowData['Name'] ?? '',
-            'StartDate': startDate,
-            'EndDate': endDate,
+            'StartYear': startDate,
+            'EndYear': endDate,
+            'ExcelFileName': selectedExcelFileName,
           });
         }
       }
@@ -194,7 +225,9 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     //   'StartDate': _selectedStartDate,
     //   'EndDate': _selectedEndDate,
     // });
-
+    setState(() {
+      isLoadingUpload = false;
+    });
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -216,145 +249,255 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            DropdownButtonFormField<String>(
-              value: null,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              DropdownButtonFormField<String>(
+                value: null,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              ),
-              hint: Text("Select Course"),
-              items: courseNames
-                  .map(
-                    (courseName) => DropdownMenuItem<String>(
-                      value: courseName,
-                      child: Text(courseName),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (selctedcourse) {
-                setState(() {
-                  _selectedCourse = selctedcourse;
-                });
-              },
-            ),
-            const SizedBox(
-              height: 15,
-            ),
-            DropdownButtonFormField<String>(
-              value: null,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              hint: const Text("Select Division"),
-              items: divisionNames
-                  .map(
-                    (divName) => DropdownMenuItem<String>(
-                      value: divName,
-                      child: Text(divName),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (selecteddiv) {
-                setState(() {
-                  _selectedDiv = selecteddiv;
-                });
-              },
-            ),
-            const SizedBox(
-              height: 15,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => _selectStartDate(context),
-                      child: Text("Select Start Date"),
-                    ),
-                    Text(_selectedStartDate != null
-                        ? "Start Date: ${DateFormat('yyyy-MM-dd').format(_selectedStartDate!)}"
-                        : ""),
-                  ],
-                ),
-                Column(
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => _selectEndDate(context),
-                      child: Text("Select End Date"),
-                    ),
-                    Text(_selectedEndDate != null
-                        ? "End Date: ${DateFormat('yyyy-MM-dd').format(_selectedEndDate!)}"
-                        : ""),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(
-              height: 15,
-            ),
-            CustomWidgets.loginButton(
-                context, _readExcelData, isLoading, "Select File"),
-            const SizedBox(height: 10),
-            CustomWidgets.loginButton(
-                context, _uploadData, isLoading, "Upload Data"),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: excelData.length,
-                itemBuilder: (context, index) {
-                  var rowData = excelData[index];
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('RollNo: ${rowData['RollNo'] ?? ''}',
-                          style: TextStyle(fontSize: 16)),
-                      Text('EnrollmentNo: ${rowData['EnrollmentNo'] ?? ''}',
-                          style: TextStyle(fontSize: 16)),
-                      Text('Name: ${rowData['Name'] ?? ''}',
-                          style: TextStyle(fontSize: 16)),
-                      SizedBox(height: 10),
-                    ],
-                  );
+                hint: Text("Select Course"),
+                items: courseNames
+                    .map(
+                      (courseName) => DropdownMenuItem<String>(
+                        value: courseName,
+                        child: Text(courseName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (selctedcourse) {
+                  setState(() {
+                    _selectedCourse = selctedcourse;
+                  });
+                },
+                validator: (val) {
+                  if (val == null) {
+                    return "Please select a course";
+                  }
+                  return null;
                 },
               ),
-            ),
-          ],
+              const SizedBox(
+                height: 15,
+              ),
+              DropdownButtonFormField<String>(
+                value: null,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                hint: const Text("Select Division"),
+                items: divisionNames
+                    .map(
+                      (divName) => DropdownMenuItem<String>(
+                        value: divName,
+                        child: Text(divName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (selecteddiv) {
+                  setState(() {
+                    _selectedDiv = selecteddiv;
+                  });
+                },
+                validator: (val) {
+                  if (val == null) {
+                    return "Please select a Division";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(
+                height: 15,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
+                    children: [
+                      // ElevatedButton(
+                      //   onPressed: () => _selectStartDate(context),
+                      //   child: Text("Select Start Date"),
+                      // ),
+                      DropdownButtonFormField<int>(
+                        value: _selectedStartDate?.year,
+                        items: List.generate(101, (index) {
+                          final year = DateTime.now().year - 50 + index;
+                          return DropdownMenuItem<int>(
+                              value: year, child: Text(year.toString()));
+                        }),
+                        onChanged: (selectedYear) {
+                          setState(() {
+                            _selectedStartDate = DateTime(selectedYear!);
+                          });
+                        },
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          hintText: "Select Start Year",
+                        ),
+                        validator: (val) {
+                          if (val == null) {
+                            return "Please select start year";
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(
+                        height: 15,
+                      ),
+                      Text(_selectedStartDate != null
+                          ? "Start Year: ${DateFormat('yyyy').format(_selectedStartDate!)}"
+                          : ""),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      // ElevatedButton(
+                      //   onPressed: () => _selectEndDate(context),
+                      //   child: Text("Select End Date"),
+                      // ),
+                      DropdownButtonFormField<int>(
+                        value: _selectedEndDate?.year,
+                        items: List.generate(101, (index) {
+                          final year = DateTime.now().year - 50 + index;
+                          return DropdownMenuItem<int>(
+                              value: year, child: Text(year.toString()));
+                        }),
+                        onChanged: (selectedYear) {
+                          setState(() {
+                            _selectedEndDate = DateTime(selectedYear!);
+                          });
+                        },
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          hintText: "Select End Year",
+                        ),
+                        validator: (val) {
+                          if (val == null) {
+                            return "Please select end year";
+                          }
+                          if (_selectedStartDate != null &&
+                              val < _selectedEndDate!.year) {
+                            return "End year should not be less than Start year";
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(
+                        height: 15,
+                      ),
+                      Text(_selectedEndDate != null
+                          ? "End Year: ${DateFormat('yyyy').format(_selectedEndDate!)}"
+                          : ""),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(
+                height: 15,
+              ),
+
+              CustomWidgets.loginButton(
+                  context, _readExcelData, isLoadingFile, "Select File"),
+              const SizedBox(height: 10),
+              CustomWidgets.loginButton(
+                  context, _uploadData, isLoadingUpload, "Upload Data"),
+              const SizedBox(height: 20),
+              // Expanded(
+              //   child: ListView.builder(
+              //     itemCount: excelData.length,
+              //     itemBuilder: (context, index) {
+              //       var rowData = excelData[index];
+              //       return Column(
+              //         crossAxisAlignment: CrossAxisAlignment.start,
+              //         children: [
+              //           Text('RollNo: ${rowData['RollNo'] ?? ''}',
+              //               style: TextStyle(fontSize: 16)),
+              //           Text('EnrollmentNo: ${rowData['EnrollmentNo'] ?? ''}',
+              //               style: TextStyle(fontSize: 16)),
+              //           Text('Name: ${rowData['Name'] ?? ''}',
+              //               style: TextStyle(fontSize: 16)),
+              //           SizedBox(height: 10),
+              //         ],
+              //       );
+              //     },
+              //   ),
+              // ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> _selectStartDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null && picked != _selectedStartDate) {
+    DateTime currentDate = DateTime.now();
+    int selectedYear = currentDate.year;
+    // final DateTime? picked = await showDatePicker(
+    //   context: context,
+    //   initialDate: DateTime.now(),
+    //   firstDate: DateTime(2000),
+    //   lastDate: DateTime(2101),
+    // );
+    final DateTime? pickedDate = await showDialog<DateTime>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("Select Start Year"),
+            content: YearPicker(
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2101),
+                initialDate: DateTime(selectedYear),
+                selectedDate: _selectedStartDate ?? DateTime(selectedYear),
+                onChanged: (DateTime year) {
+                  Navigator.of(context).pop(year);
+                }),
+          );
+        });
+    if (pickedDate != null) {
       setState(() {
-        _selectedStartDate = picked;
+        _selectedStartDate = pickedDate;
       });
     }
   }
 
   Future<void> _selectEndDate(BuildContext context) async {
-    final DateTime? picked2 = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (picked2 != null && picked2 != _selectedEndDate) {
+    DateTime currentDate = DateTime.now();
+    int selectedYear = currentDate.year;
+    // final DateTime? picked = await showDatePicker(
+    //   context: context,
+    //   initialDate: DateTime.now(),
+    //   firstDate: DateTime(2000),
+    //   lastDate: DateTime(2101),
+    // );
+    final DateTime? pickedDate = await showDialog<DateTime>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("Select End Year"),
+            content: YearPicker(
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2101),
+                initialDate: DateTime(selectedYear),
+                selectedDate: _selectedStartDate ?? DateTime(selectedYear),
+                onChanged: (DateTime year) {
+                  Navigator.of(context).pop(year);
+                }),
+          );
+        });
+    if (pickedDate != null) {
       setState(() {
-        _selectedEndDate = picked2;
+        _selectedEndDate = pickedDate;
       });
     }
   }

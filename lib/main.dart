@@ -1,12 +1,7 @@
+import 'dart:async';
+
 import 'package:attendance_admin/manage/add_faculty_screen.dart';
-import 'package:attendance_admin/screens/faculty_home_screen.dart';
-import 'package:attendance_admin/screens/login_selection_screen.dart';
-import 'package:attendance_admin/screens/signin_screen.dart';
-import 'package:attendance_admin/screens/splash_screen.dart';
-import 'package:attendance_admin/screens/tabs_screen.dart';
-import 'package:attendance_admin/services/auth_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:attendance_admin/screens/wrapper.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
@@ -24,6 +19,16 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  // @override
+  // void initState() {
+  //   // TODO: implement initState
+  //   super.initState();
+  //   Timer(
+  //       Duration(seconds: 5),
+  //       () => Navigator.of(context)
+  //           .push(MaterialPageRoute(builder: (context) => Wrapper())));
+  // }
+
   bool isDialogShown = false;
   @override
   Widget build(BuildContext context) {
@@ -36,12 +41,13 @@ class _MyAppState extends State<MyApp> {
               ColorScheme.fromSeed(seedColor: Theme.of(context).primaryColor),
           useMaterial3: true,
           appBarTheme: AppBarTheme(
-            color: Colors.blue.shade800,
+            color: Theme.of(context).primaryColor,
             elevation: 0,
           ),
           iconTheme: IconThemeData(color: Colors.blue),
           buttonTheme: ButtonThemeData(buttonColor: Colors.blue)),
-      home: SplashScreen(),
+      home: Wrapper(),
+      routes: {'/addFaculty': (context) => AddFacultyScreen()},
     );
     // return FutureBuilder<DocumentSnapshot>(
     //     future: adminRef.get(),

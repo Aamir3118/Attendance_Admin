@@ -41,8 +41,10 @@ dependencies:
   dropdown_search: ^5.0.5
   excel: ^2.0.4
   file_picker: ^5.3.2
-  intl: ^0.18.0
+  intl: ^0.17.0
   open_file: ^3.3.1
+  firebase_admin: ^0.2.0
+  flutter_native_splash: ^2.3.2
 
 dev_dependencies:
   flutter_test:
@@ -54,7 +56,11 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
-
+flutter_native_splash:
+  #color: "#071b5d"
+  image: assets/attendance_img.png
+  android: true
+  ios: true
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

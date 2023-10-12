@@ -22,24 +22,21 @@ class _WrapperState extends State<Wrapper> {
           String? adminUid = AuthService().getCurrentUserUID();
 
           User? user = adminSnapshot.data;
-          if (adminSnapshot.hasData) {
-            return FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('Admin')
-                    .doc(adminUid)
-                    .get(),
-                builder: (ctx, adminDataSnapshot) {
-                  if (adminDataSnapshot.hasData &&
-                      adminDataSnapshot.data!.exists) {
-                    print("Admin");
-                    return TabsScreen();
-                  } else {
-                    return SignInScreen();
-                  }
-                });
-          } else {
-            return SignInScreen();
-          }
+          //if (adminSnapshot.hasData) {
+          return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('Admin')
+                  .doc(adminUid)
+                  .get(),
+              builder: (ctx, adminDataSnapshot) {
+                if (adminDataSnapshot.hasData &&
+                    adminDataSnapshot.data!.exists) {
+                  print("Admin");
+                  return TabsScreen();
+                } else {
+                  return SignInScreen();
+                }
+              });
         });
   }
 }

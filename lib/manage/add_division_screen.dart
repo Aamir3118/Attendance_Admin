@@ -73,7 +73,7 @@ class _AddDivisionScreenState extends State<AddDivisionScreen> {
         // Check if a course with the same normalized name exists
         QuerySnapshot querySnapshot = await FirebaseFirestore.instance
             .collection('divisions')
-            .where('divisons', isEqualTo: divName)
+            .where('div_name', isEqualTo: divName)
             .get();
 
         // Store the course data in the courses collection

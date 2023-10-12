@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:attendance_admin/screens/wrapper.dart';
 import 'package:flutter/material.dart';
 
 import '../services/splash_service.dart';
@@ -10,12 +13,15 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  SplashService splashService = SplashService();
-  @override
-  void initState() {
-    super.initState();
-    splashService.isLogin(context);
-  }
+  // SplashService splashService = SplashService();
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   Timer(
+  //       const Duration(seconds: 3),
+  //       () => Navigator.pushReplacement(
+  //           context, MaterialPageRoute(builder: (context) => const Wrapper())));
+  // }
 
   final String iconImage = "assets/Attendance_System-removebg-preview.png";
   @override

@@ -83,7 +83,7 @@ class CustomWidgets {
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: Theme.of(context).primaryColor,
+          color: Colors.blue,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -118,14 +118,13 @@ TextFormField textFormField(
   return TextFormField(
     controller: controller,
     keyboardType: inputType,
-    decoration: _decoration(hint, context, obscure, controller, icon),
+    decoration: decoration(hint, context, obscure, controller, icon),
     obscureText: obscure,
     validator: validation,
   );
 }
 
-InputDecoration _decoration(
-    hintTexts, context, bool obscure, controller, icon) {
+InputDecoration decoration(hintTexts, context, bool obscure, controller, icon) {
   return InputDecoration(
     prefixIcon: Icon(icon),
     focusedErrorBorder: const OutlineInputBorder(

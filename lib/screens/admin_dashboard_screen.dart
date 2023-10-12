@@ -1,3 +1,6 @@
+import 'package:attendance_admin/dashboard/edit_course.dart';
+import 'package:attendance_admin/dashboard/edit_division.dart';
+import 'package:attendance_admin/dashboard/edit_faculty.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -14,13 +17,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     {"title": "Faculty", "collection": "faculties"},
     {"title": "Admin", "collection": "Admin"},
     {"title": "Course", "collection": "courses"},
-    {"title": "Subject", "collection": "subjects"},
+    {"title": "Division", "collection": "divisions"},
   ];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: GridView(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.only(
+          left: 15.0,
+          top: 15.0,
+          right: 15.5,
+        ),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           childAspectRatio: 4 / 3,
@@ -41,40 +48,85 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     return Text('Error: ${snapshot.error}');
                   } else {
                     final itemCount = snapshot.data ?? 0;
-                    return Container(
-                      padding: EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.blue.shade50.withOpacity(0.7),
-                            Colors.blue.shade50
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
+                    return InkWell(
+                      onTap: () {
+                        int getItemIndex = dashboardItemList.indexOf(itemData);
+                        print(dashboardItemList.indexOf(itemData));
+                        print(itemData['title']);
+
+                        switch (getItemIndex) {
+                          case 0:
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => EditFaculty(
+                                  facultyTitle: itemData['title'],
+                                ),
+                              ),
+                            );
+                            break;
+                          case 1:
+                            // Navigator.of(context).push(
+                            //   MaterialPageRoute(
+                            //     builder: (context) => EditFaculty(),
+                            //   ),
+                            break;
+                          case 2:
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => EditCourse(
+                                  courses: itemData['title'],
+                                ),
+                              ),
+                            );
+                            break;
+                          case 3:
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => EditDivision(
+                                  divisions: itemData['title'],
+                                ),
+                              ),
+                            );
+                            break;
+                          default:
+                            break;
+                        }
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.blue.shade50.withOpacity(0.7),
+                              Colors.blue.shade50
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            itemData['title'],
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade600,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              itemData['title'],
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            itemCount.toString(), // Display the item count
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 30,
-                                color: Colors.black54,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                            SizedBox(height: 10),
+                            Text(
+                              itemCount.toString(), // Display the item count
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 30,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }
