@@ -39,10 +39,25 @@ class _EditCourseState extends State<EditCourse> {
       // await FirebaseAuth.instance.currentUser?.delete();
 
       // Delete the Firestore document
+      QuerySnapshot subjectsSnapshot = await FirebaseFirestore.instance
+          .collection('courses')
+          .doc(courseId)
+          .collection('subjects')
+          .get();
+      for (QueryDocumentSnapshot subjectDoc in subjectsSnapshot.docs) {
+        await subjectDoc.reference.delete();
+      }
+      await FirebaseFirestore.instance
+          .collection('courses')
+          .doc(courseId)
+          .collection('subjects')
+          .doc(courseName)
+          .delete();
       await FirebaseFirestore.instance
           .collection('courses')
           .doc(courseId)
           .delete();
+
       // await FirebaseFirestore.instance
       //     .collection('subjects')
       //     .doc(courseId)
@@ -53,7 +68,7 @@ class _EditCourseState extends State<EditCourse> {
       //     doc.reference.delete();
       //   });
       // });
-      
+
       print('$courseName deleted successfully.');
     } catch (e) {
       print('Error deleting user and document: $e');

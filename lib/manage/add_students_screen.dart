@@ -25,6 +25,7 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
   // String selectedDivision = '';
   // List<String> semesterList = ['Sem1', 'Sem2', 'Sem3'];
   // void _uploadFile() async {}
+
   List<Map<String, dynamic>> excelData = [];
   var isLoadingFile = false;
   var isLoadingUpload = false;
@@ -81,6 +82,9 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     if (result != null &&
         result.files.isNotEmpty &&
         result.files.single.path != null) {
+      setState(() {
+        isLoadingFile = false;
+      });
       try {
         selectedExcelFileName = result.files.first.name;
         String filePath = result.files.single.path!;
@@ -168,6 +172,8 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
         studentsCollection.doc(_selectedCourse).collection('divisions');
     CollectionReference divisionCollection =
         courseCollection.doc(_selectedDiv).collection('Enrollments');
+    CollectionReference dateCollection =
+        divisionCollection.doc(startDate as String?).collection('Enrollments');
 
     for (var rowData in excelData) {
       String enrollmentNo = rowData['EnrollmentNo'] ?? '';
@@ -239,6 +245,10 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    double spacing = 16.0;
+    if (MediaQuery.of(context).size.width > 600) {
+      spacing = 32.0;
+    }
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -247,193 +257,256 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
           style: TextStyle(color: Colors.white),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              DropdownButtonFormField<String>(
-                value: null,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              //mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                DropdownButtonFormField<String>(
+                  value: null,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                ),
-                hint: Text("Select Course"),
-                items: courseNames
-                    .map(
-                      (courseName) => DropdownMenuItem<String>(
-                        value: courseName,
-                        child: Text(courseName),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (selctedcourse) {
-                  setState(() {
-                    _selectedCourse = selctedcourse;
-                  });
-                },
-                validator: (val) {
-                  if (val == null) {
-                    return "Please select a course";
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(
-                height: 15,
-              ),
-              DropdownButtonFormField<String>(
-                value: null,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                hint: const Text("Select Division"),
-                items: divisionNames
-                    .map(
-                      (divName) => DropdownMenuItem<String>(
-                        value: divName,
-                        child: Text(divName),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (selecteddiv) {
-                  setState(() {
-                    _selectedDiv = selecteddiv;
-                  });
-                },
-                validator: (val) {
-                  if (val == null) {
-                    return "Please select a Division";
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(
-                height: 15,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  Column(
-                    children: [
-                      // ElevatedButton(
-                      //   onPressed: () => _selectStartDate(context),
-                      //   child: Text("Select Start Date"),
-                      // ),
-                      DropdownButtonFormField<int>(
-                        value: _selectedStartDate?.year,
-                        items: List.generate(101, (index) {
-                          final year = DateTime.now().year - 50 + index;
-                          return DropdownMenuItem<int>(
-                              value: year, child: Text(year.toString()));
-                        }),
-                        onChanged: (selectedYear) {
-                          setState(() {
-                            _selectedStartDate = DateTime(selectedYear!);
-                          });
-                        },
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          hintText: "Select Start Year",
+                  hint: Text("Select Course"),
+                  items: courseNames
+                      .map(
+                        (courseName) => DropdownMenuItem<String>(
+                          value: courseName,
+                          child: Text(courseName),
                         ),
-                        validator: (val) {
-                          if (val == null) {
-                            return "Please select start year";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(
-                        height: 15,
-                      ),
-                      Text(_selectedStartDate != null
-                          ? "Start Year: ${DateFormat('yyyy').format(_selectedStartDate!)}"
-                          : ""),
-                    ],
+                      )
+                      .toList(),
+                  onChanged: (selctedcourse) {
+                    setState(() {
+                      _selectedCourse = selctedcourse;
+                    });
+                  },
+                  validator: (val) {
+                    if (val == null) {
+                      return "Please select a course";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
+                DropdownButtonFormField<String>(
+                  value: null,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  Column(
-                    children: [
-                      // ElevatedButton(
-                      //   onPressed: () => _selectEndDate(context),
-                      //   child: Text("Select End Date"),
-                      // ),
-                      DropdownButtonFormField<int>(
-                        value: _selectedEndDate?.year,
-                        items: List.generate(101, (index) {
-                          final year = DateTime.now().year - 50 + index;
-                          return DropdownMenuItem<int>(
-                              value: year, child: Text(year.toString()));
-                        }),
-                        onChanged: (selectedYear) {
-                          setState(() {
-                            _selectedEndDate = DateTime(selectedYear!);
-                          });
-                        },
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          hintText: "Select End Year",
+                  hint: const Text("Select Division"),
+                  items: divisionNames
+                      .map(
+                        (divName) => DropdownMenuItem<String>(
+                          value: divName,
+                          child: Text(divName),
                         ),
-                        validator: (val) {
-                          if (val == null) {
-                            return "Please select end year";
-                          }
-                          if (_selectedStartDate != null &&
-                              val < _selectedEndDate!.year) {
-                            return "End year should not be less than Start year";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(
-                        height: 15,
-                      ),
-                      Text(_selectedEndDate != null
-                          ? "End Year: ${DateFormat('yyyy').format(_selectedEndDate!)}"
-                          : ""),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(
-                height: 15,
-              ),
+                      )
+                      .toList(),
+                  onChanged: (selecteddiv) {
+                    setState(() {
+                      _selectedDiv = selecteddiv;
+                    });
+                  },
+                  validator: (val) {
+                    if (val == null) {
+                      return "Please select a Division";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
 
-              CustomWidgets.loginButton(
-                  context, _readExcelData, isLoadingFile, "Select File"),
-              const SizedBox(height: 10),
-              CustomWidgets.loginButton(
-                  context, _uploadData, isLoadingUpload, "Upload Data"),
-              const SizedBox(height: 20),
-              // Expanded(
-              //   child: ListView.builder(
-              //     itemCount: excelData.length,
-              //     itemBuilder: (context, index) {
-              //       var rowData = excelData[index];
-              //       return Column(
-              //         crossAxisAlignment: CrossAxisAlignment.start,
-              //         children: [
-              //           Text('RollNo: ${rowData['RollNo'] ?? ''}',
-              //               style: TextStyle(fontSize: 16)),
-              //           Text('EnrollmentNo: ${rowData['EnrollmentNo'] ?? ''}',
-              //               style: TextStyle(fontSize: 16)),
-              //           Text('Name: ${rowData['Name'] ?? ''}',
-              //               style: TextStyle(fontSize: 16)),
-              //           SizedBox(height: 10),
-              //         ],
-              //       );
-              //     },
-              //   ),
-              // ),
-            ],
+                // ElevatedButton(
+                //   onPressed: () => _selectStartDate(context),
+                //   child: Text("Select Start Date"),
+                // ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          DropdownButtonFormField<int>(
+                            value: _selectedStartDate?.year,
+                            items: List.generate(101, (index) {
+                              final year = DateTime.now().year - 50 + index;
+                              return DropdownMenuItem<int>(
+                                  value: year, child: Text(year.toString()));
+                            }),
+                            onChanged: (selectedYear) {
+                              setState(() {
+                                _selectedStartDate = DateTime(selectedYear!);
+                              });
+                            },
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              hintText: "Select Start Year",
+                            ),
+                            validator: (val) {
+                              if (val == null) {
+                                return "Please select start year";
+                              }
+                              return null;
+                            },
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(_selectedStartDate != null
+                              ? "Start Year: ${DateFormat('yyyy').format(_selectedStartDate!)}"
+                              : ""),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: spacing,
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          DropdownButtonFormField<int>(
+                            value: _selectedEndDate?.year,
+                            items: List.generate(101, (index) {
+                              final year = DateTime.now().year - 50 + index;
+                              return DropdownMenuItem<int>(
+                                  value: year, child: Text(year.toString()));
+                            }),
+                            onChanged: (selectedYear) {
+                              setState(() {
+                                _selectedEndDate = DateTime(selectedYear!);
+                              });
+                            },
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              hintText: "Select End Year",
+                            ),
+                            validator: (val) {
+                              if (val == null) {
+                                return "Please select end year";
+                              }
+                              if (_selectedStartDate != null &&
+                                  val < _selectedEndDate!.year) {
+                                return "End year should not be less than Start year";
+                              }
+                              return null;
+                            },
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(_selectedEndDate != null
+                              ? "End Year: ${DateFormat('yyyy').format(_selectedEndDate!)}"
+                              : ""),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                // const SizedBox(
+                //   height: 15,
+                // ),
+                // Text(_selectedStartDate != null
+                //     ? "Start Year: ${DateFormat('yyyy').format(_selectedStartDate!)}"
+                //     : ""),
+
+                // Column(
+                //   children: [
+                //     // ElevatedButton(
+                //     //   onPressed: () => _selectEndDate(context),
+                //     //   child: Text("Select End Date"),
+                //     // ),
+                //     Expanded(
+                //       child: DropdownButtonFormField<int>(
+                //         value: _selectedEndDate?.year,
+                //         items: List.generate(101, (index) {
+                //           final year = DateTime.now().year - 50 + index;
+                //           return DropdownMenuItem<int>(
+                //               value: year, child: Text(year.toString()));
+                //         }),
+                //         onChanged: (selectedYear) {
+                //           setState(() {
+                //             _selectedEndDate = DateTime(selectedYear!);
+                //           });
+                //         },
+                //         decoration: InputDecoration(
+                //           border: OutlineInputBorder(
+                //             borderRadius: BorderRadius.circular(12),
+                //           ),
+                //           hintText: "Select End Year",
+                //         ),
+                //         validator: (val) {
+                //           if (val == null) {
+                //             return "Please select end year";
+                //           }
+                //           if (_selectedStartDate != null &&
+                //               val < _selectedEndDate!.year) {
+                //             return "End year should not be less than Start year";
+                //           }
+                //           return null;
+                //         },
+                //       ),
+                //     ),
+                //     // const SizedBox(
+                //     //   height: 15,
+                //     // ),
+                //     Text(_selectedEndDate != null
+                //         ? "End Year: ${DateFormat('yyyy').format(_selectedEndDate!)}"
+                //         : ""),
+                //   ],
+                // ),
+
+                const SizedBox(
+                  height: 15,
+                ),
+                selectedExcelFileName == null
+                    ? Text("")
+                    : Text(selectedExcelFileName!),
+                const SizedBox(
+                  height: 15,
+                ),
+                CustomWidgets.loginButton(
+                    context, _readExcelData, isLoadingFile, "Select File"),
+                const SizedBox(height: 10),
+                CustomWidgets.loginButton(
+                    context, _uploadData, isLoadingUpload, "Upload Data"),
+                const SizedBox(height: 20),
+                // Expanded(
+                //   child: ListView.builder(
+                //     itemCount: excelData.length,
+                //     itemBuilder: (context, index) {
+                //       var rowData = excelData[index];
+                //       return Column(
+                //         crossAxisAlignment: CrossAxisAlignment.start,
+                //         children: [
+                //           Text('RollNo: ${rowData['RollNo'] ?? ''}',
+                //               style: TextStyle(fontSize: 16)),
+                //           Text('EnrollmentNo: ${rowData['EnrollmentNo'] ?? ''}',
+                //               style: TextStyle(fontSize: 16)),
+                //           Text('Name: ${rowData['Name'] ?? ''}',
+                //               style: TextStyle(fontSize: 16)),
+                //           SizedBox(height: 10),
+                //         ],
+                //       );
+                //     },
+                //   ),
+                // ),
+              ],
+            ),
           ),
         ),
       ),
