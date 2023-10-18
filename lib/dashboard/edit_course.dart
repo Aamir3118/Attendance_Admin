@@ -47,17 +47,69 @@ class _EditCourseState extends State<EditCourse> {
       for (QueryDocumentSnapshot subjectDoc in subjectsSnapshot.docs) {
         await subjectDoc.reference.delete();
       }
-      await FirebaseFirestore.instance
-          .collection('courses')
-          .doc(courseId)
-          .collection('subjects')
-          .doc(courseName)
-          .delete();
+      // await FirebaseFirestore.instance
+      //     .collection('courses')
+      //     .doc(courseId)
+      //     .collection('subjects')
+      //     .doc(courseName)
+      //     .delete();
       await FirebaseFirestore.instance
           .collection('courses')
           .doc(courseId)
           .delete();
 
+      final CollectionReference studentsCollection =
+          FirebaseFirestore.instance.collection("students");
+
+      // Query for students where course_name is equal to the old course name
+      QuerySnapshot studentsQuery = await studentsCollection
+          .where("course_name", isEqualTo: courseName)
+          .get();
+
+      // Iterate through the students and update their course_name
+      for (QueryDocumentSnapshot studentDoc in studentsQuery.docs) {
+        // delete the course_name field in each student document
+        //await studentDoc.reference.collection("enrollments").doc()
+        // Delete the enrollments subcollection for the student document
+        await studentDoc.reference
+            .collection("enrollments")
+            .get()
+            .then((enrollmentsQuery) {
+          for (QueryDocumentSnapshot enrollmentDoc in enrollmentsQuery.docs) {
+            enrollmentDoc.reference.delete();
+          }
+        });
+        await studentDoc.reference.delete();
+      }
+
+      // DocumentReference courseRef =
+      //     FirebaseFirestore.instance.collection('courses').doc(courseName);
+      // DocumentSnapshot courseSnapshot = await courseRef.get();
+      // if (!courseSnapshot.exists) {
+      //   return;
+      // }
+      //String courseId=courseSnapshot.id;
+      // QuerySnapshot studentSnapshot = await FirebaseFirestore.instance
+      //     .collection('students')
+      //     .where(FieldPath.documentId, isEqualTo: courseName)
+      //     .get();
+      // //Delete the student documents
+      // for (QueryDocumentSnapshot studentDoc in studentSnapshot.docs) {
+      //   await studentDoc.reference.delete();
+      // }
+      // await courseRef.collection('divisions').get().then((querySnapshot) {
+      //   querySnapshot.docs.forEach((divisionDoc) async {
+      //     await divisionDoc.reference
+      //         .collection('enrollments')
+      //         .get()
+      //         .then((enrollmentsQuerySnapshot) {
+      //       enrollmentsQuerySnapshot.docs.forEach((enrollmentDoc) async {
+      //         await enrollmentDoc.reference.delete();
+      //       });
+      //     });
+      //     await divisionDoc.reference.delete();
+      //   });
+      // });
       // await FirebaseFirestore.instance
       //     .collection('subjects')
       //     .doc(courseId)
@@ -154,10 +206,6 @@ class _EditCourseState extends State<EditCourse> {
                                 background: Container(
                                   alignment: AlignmentDirectional.centerEnd,
                                   color: Colors.red,
-                                  child: Icon(
-                                    Icons.delete,
-                                    color: Colors.white,
-                                  ),
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),

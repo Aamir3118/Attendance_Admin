@@ -121,30 +121,75 @@ class _CourseEditState extends State<CourseEdit> {
         final CollectionReference _course =
             FirebaseFirestore.instance.collection("courses");
         final DocumentReference courseDocRef = _course.doc(widget.courseId);
+        final CollectionReference studentsCollection =
+            firestore.collection("students");
 
         //update course_name in courses collection
-        // await FirebaseFirestore.instance
-        //     .collection("courses")
-        //     .doc(widget.courseId)
-        //     .update({
-        //   "course_name": courseController.text,
-        // });
-
-        final CollectionReference subjectsCollection =
-            firestore.collection('subjects');
-
-        // Retrieve all documents in the "subjects" collection
-        QuerySnapshot subjectsQuery = await subjectsCollection.get();
-
-        for (QueryDocumentSnapshot docSnapshot in subjectsQuery.docs) {
-          // Print the document ID
-          print("Document ID: ${docSnapshot.id}");
+        await courseDocRef.update({
+          "course_name": courseController.text,
+        });
+        QuerySnapshot studQuery = await studentsCollection
+            .where("course_name", isEqualTo: widget.courseName)
+            .get();
+        for (QueryDocumentSnapshot studentDoc in studQuery.docs) {
+          await studentDoc.reference.update({"course_name": newCourse});
         }
+        // DocumentSnapshot oldStudentDocSnapshot = await firestore
+        //     .collection("students")
+        //     .where("course_name", isEqualTo: widget.courseName)
+        //     .get() as DocumentSnapshot<Object?>;
+        //         final DocumentReference courseDocRef2 = oldStudentDocSnapshot.doc(widget.courseId);
+
+        // oldStudentDocSnapshot.update();
+        // final DocumentReference newStudentDocRef =
+        //     firestore.collection("students").doc(courseController.text);
+        // DocumentSnapshot oldStudentDocSnapshot = (await firestore
+        //     .collection("students")
+        //     .doc(widget.courseName)
+        //     .collection("divisions")
+        //     .doc("A")
+        //     .collection("start_year")
+        //     .doc("2023")
+        //     .collection("enrollments")
+        //     .get()) as DocumentSnapshot<Object?>;
+        // if (oldStudentDocSnapshot.exists) {
+        //   await newStudentDocRef.set(oldStudentDocSnapshot.data());
+        // } else {
+        //   print("Not exists");
+        // }
+        // await firestore.collection("students").doc(widget.courseName).delete();
+        // // QuerySnapshot studentSnapshot = await FirebaseFirestore.instance
+        // //     .collection('students')
+
+        // //     .where(FieldPath.documentId, isEqualTo: widget.courseName)
+        // //     .get();
+        // // //Update the student documents
+        // // for (QueryDocumentSnapshot studentDoc in studentSnapshot.docs) {
+        // //   await studentDoc.reference.update(newCourse as Map<Object, Object?>);
+        // // }
+
+        // final CollectionReference subjectsCollection =
+        //     firestore.collection('subjects');
+
+        // // Retrieve all documents in the "subjects" collection
+        // QuerySnapshot subjectsQuery = await subjectsCollection.get();
+
+        // for (QueryDocumentSnapshot docSnapshot in subjectsQuery.docs) {
+        //   // Print the document ID
+        //   print("Document ID: ${docSnapshot.id}");
+        // }
 
         setState(() {
           isLoading = false;
           //widget.courseName = _courseController.text;
         });
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text("Success"),
+            content: Text("Course edited added successfully."),
+          ),
+        );
       } catch (e) {}
     }
   }

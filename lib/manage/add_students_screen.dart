@@ -42,6 +42,51 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     super.initState();
     _loadCourseNames();
     _loadDivisionNames();
+    printStudents();
+  }
+
+  Future<void> printStudents() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final CollectionReference studentsCollection =
+        firestore.collection("students");
+
+    // Define your query criteria
+    final String selectedCourse = "course 5";
+    final String selectedDiv = "A";
+    final int startYear = 2023;
+    final int endYear = 2025;
+
+    // Query for the student document based on your criteria
+    QuerySnapshot studentsQuery = await studentsCollection
+        .where('course_name', isEqualTo: selectedCourse)
+        .where('div_name', isEqualTo: selectedDiv)
+        .where('start_year', isEqualTo: startYear)
+        .where('end_year', isEqualTo: endYear)
+        .get();
+
+    if (studentsQuery.docs.isNotEmpty) {
+      // Student document found, now retrieve data from the enrollments subcollection
+      final DocumentReference studentDocRef =
+          studentsQuery.docs.first.reference;
+      final CollectionReference enrollmentsCollection =
+          studentDocRef.collection('enrollments');
+
+      QuerySnapshot enrollmentsQuery = await enrollmentsCollection.get();
+      if (enrollmentsQuery.docs.isNotEmpty) {
+        // Data found, iterate through the documents and print them
+        for (QueryDocumentSnapshot enrollmentDoc in enrollmentsQuery.docs) {
+          print("Enrollment No: ${enrollmentDoc['EnrollmentNo']}");
+          print("Roll No: ${enrollmentDoc['RollNo']}");
+          print("Name: ${enrollmentDoc['Name']}");
+        }
+      } else {
+        // No data found in enrollments collection
+        print("No student data found.");
+      }
+    } else {
+      // No student document matching the criteria found
+      print("No student document found.");
+    }
   }
 
   Future<void> _loadCourseNames() async {
@@ -156,6 +201,45 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     FocusManager.instance.primaryFocus!.unfocus();
     if (_formKey.currentState?.validate() == false ||
         selectedExcelFileName == null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Error"),
+          content: Text("Please select an Excel file before uploading data."),
+        ),
+      );
+      return;
+    }
+    if (_selectedStartDate != null &&
+        _selectedEndDate != null &&
+        _selectedStartDate!.isAfter(_selectedEndDate!)) {
+      // Display an error message and prevent data upload
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Error"),
+          content: Text("Start year cannot be greater than the end year."),
+        ),
+      );
+      setState(() {
+        isLoadingUpload = false;
+      });
+      return;
+    }
+    if (_selectedStartDate != null &&
+        _selectedEndDate != null &&
+        _selectedEndDate!.isBefore(_selectedStartDate!)) {
+      // Display an error message and prevent data upload
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Error"),
+          content: Text("End year cannot be smaller than the start year."),
+        ),
+      );
+      setState(() {
+        isLoadingUpload = false;
+      });
       return;
     }
     setState(() {
@@ -166,48 +250,83 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     DateTime startDate = _selectedStartDate!;
     DateTime endDate = _selectedEndDate!;
 
+    Map<String, dynamic> documentData = {
+      'div_name': selectedDiv,
+      'course_name': selectedCourse,
+      'start_year': startDate.year,
+      'end_year': endDate.year,
+    };
     CollectionReference studentsCollection =
         FirebaseFirestore.instance.collection("students");
-    CollectionReference courseCollection =
-        studentsCollection.doc(_selectedCourse).collection('divisions');
-    CollectionReference divisionCollection =
-        courseCollection.doc(_selectedDiv).collection('Enrollments');
-    CollectionReference dateCollection =
-        divisionCollection.doc(startDate as String?).collection('Enrollments');
+    //DocumentReference newDocumentRef =
+    // await studentsCollection.add(documentData);
 
-    for (var rowData in excelData) {
-      String enrollmentNo = rowData['EnrollmentNo'] ?? '';
-      if (enrollmentNo.isNotEmpty) {
-        // Check if a document with the same criteria exists
-        QuerySnapshot existingStudent = await divisionCollection
-            .where('EnrollmentNo', isEqualTo: enrollmentNo)
-            .where('StartDate', isEqualTo: startDate)
-            .where('EndDate', isEqualTo: endDate)
-            .where('ExcelFileName', isEqualTo: selectedExcelFileName)
-            .get();
+    Query existingDocQuery = studentsCollection
+        .where('div_name', isEqualTo: selectedDiv)
+        .where('course_name', isEqualTo: selectedCourse)
+        .where('start_year', isEqualTo: startDate.year)
+        .where('end_year', isEqualTo: endDate.year);
 
-        if (existingStudent.docs.isNotEmpty) {
-          String duplicateFileName =
-              existingStudent.docs.first.get('ExcelFileName');
-          showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                    title: Text("File Already Exists"),
-                    content: Text(
-                        "The file '$duplicateFileName' has already been added."),
-                  ));
-          // Update the existing document
-          // DocumentReference studentDocRef =
-          //     existingStudent.docs.first.reference;
+    QuerySnapshot existingDocs = await existingDocQuery.get();
 
-          // await studentDocRef.update({
-          //   'RollNo': rowData['RollNo'] ?? '',
-          //   'Name': rowData['Name'] ?? '',
-          // });
-        } else {
+    if (existingDocs.docs.isNotEmpty) {
+      // Document with the same criteria exists, update it
+      DocumentReference existingDocumentRef = existingDocs.docs.first.reference;
+
+      // Update the document
+      await existingDocumentRef.update(documentData);
+      CollectionReference enrollmentsCollection =
+          existingDocumentRef.collection('enrollments');
+      for (var rowData in excelData) {
+        String enrollmentNo = rowData['EnrollmentNo'] ?? '';
+        if (enrollmentNo.isNotEmpty) {
+          // Check if a document with the same criteria exists
+          QuerySnapshot existingStudent = await enrollmentsCollection
+              .where('EnrollmentNo', isEqualTo: enrollmentNo)
+              .get();
+          if (existingStudent.docs.isNotEmpty) {
+            // Update the existing document
+            DocumentReference studentDocRef =
+                existingStudent.docs.first.reference;
+
+            await studentDocRef.update({
+              'RollNo': rowData['RollNo'] ?? '',
+              'Name': rowData['Name'] ?? '',
+            });
+          } else {
+            // Create a new student document using the enrollment number as the document ID
+            DocumentReference studentDocRef =
+                enrollmentsCollection.doc(enrollmentNo);
+
+            await studentDocRef.set({
+              'RollNo': rowData['RollNo'] ?? '',
+              'EnrollmentNo': enrollmentNo,
+              'Name': rowData['Name'] ?? '',
+              'StartYear': startDate,
+              'EndYear': endDate,
+              'ExcelFileName': selectedExcelFileName,
+            });
+          }
+        }
+      }
+    } else {
+      // Document with the same criteria does not exist, create a new document
+      //await studentsCollection.add(documentData);
+      // Document with the same criteria doesn't exist, create a new one
+      // Create the main document
+      DocumentReference newDocumentRef =
+          await studentsCollection.add(documentData);
+      // Update the documentData with the newly created document's ID
+      documentData['docId'] = newDocumentRef.id;
+      // Create the enrollments subcollection
+      CollectionReference enrollmentsCollection =
+          newDocumentRef.collection('enrollments');
+      for (var rowData in excelData) {
+        String enrollmentNo = rowData['EnrollmentNo'] ?? '';
+        if (enrollmentNo.isNotEmpty) {
           // Create a new student document using the enrollment number as the document ID
           DocumentReference studentDocRef =
-              divisionCollection.doc(enrollmentNo);
+              enrollmentsCollection.doc(enrollmentNo);
 
           await studentDocRef.set({
             'RollNo': rowData['RollNo'] ?? '',
@@ -221,16 +340,49 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
       }
     }
 
-    // //Create a student document using the enrollment number as the document ID
-    // DocumentReference studentDocRef = studentsCollection.doc(enrollmentNo);
+    // Update or create the enrollments subcollection
+    // CollectionReference enrollmentsCollection =
+    //     existingDocs.docs.first.reference.collection('enrollments');
+    // for (var rowData in excelData) {
+    //   String enrollmentNo = rowData['EnrollmentNo'] ?? '';
+    //   if (enrollmentNo.isNotEmpty) {
+    //     // Check if a document with the same criteria exists
+    //     // QuerySnapshot existingStudent = await divisionCollection
+    //     //     .where('EnrollmentNo', isEqualTo: enrollmentNo)
+    //     //     .where('StartDate', isEqualTo: startDate)
+    //     //     .where('EndDate', isEqualTo: endDate)
+    //     //     .where('ExcelFileName', isEqualTo: selectedExcelFileName)
+    //     //     .get();
+    //     QuerySnapshot existingStudent = await enrollmentsCollection
+    //         .where('EnrollmentNo', isEqualTo: enrollmentNo)
+    //         //.where('ExcelFileName', isEqualTo: selectedExcelFileName)
+    //         .get();
+    //     if (existingStudent.docs.isNotEmpty) {
+    //       //Update the existing document
+    //       DocumentReference studentDocRef =
+    //           existingStudent.docs.first.reference;
 
-    // await studentDocRef.set({
-    //   'RollNo': rowData['RollNo'] ?? '',
-    //   'EnrollmentNo': enrollmentNo,
-    //   'Name': rowData['Name'] ?? '',
-    //   'StartDate': _selectedStartDate,
-    //   'EndDate': _selectedEndDate,
-    // });
+    //       await studentDocRef.update({
+    //         'RollNo': rowData['RollNo'] ?? '',
+    //         'Name': rowData['Name'] ?? '',
+    //       });
+    //     } else {
+    //       // Create a new student document using the enrollment number as the document ID
+    //       DocumentReference studentDocRef =
+    //           enrollmentsCollection.doc(enrollmentNo);
+
+    //       await studentDocRef.set({
+    //         'RollNo': rowData['RollNo'] ?? '',
+    //         'EnrollmentNo': enrollmentNo,
+    //         'Name': rowData['Name'] ?? '',
+    //         'StartYear': startDate,
+    //         'EndYear': endDate,
+    //         'ExcelFileName': selectedExcelFileName,
+    //       });
+    //     }
+    //   }
+    // }
+
     setState(() {
       isLoadingUpload = false;
     });
@@ -359,6 +511,7 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                               if (val == null) {
                                 return "Please select start year";
                               }
+
                               return null;
                             },
                           ),
@@ -399,10 +552,7 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                               if (val == null) {
                                 return "Please select end year";
                               }
-                              if (_selectedStartDate != null &&
-                                  val < _selectedEndDate!.year) {
-                                return "End year should not be less than Start year";
-                              }
+
                               return null;
                             },
                           ),
@@ -417,58 +567,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                     ),
                   ],
                 ),
-                // const SizedBox(
-                //   height: 15,
-                // ),
-                // Text(_selectedStartDate != null
-                //     ? "Start Year: ${DateFormat('yyyy').format(_selectedStartDate!)}"
-                //     : ""),
-
-                // Column(
-                //   children: [
-                //     // ElevatedButton(
-                //     //   onPressed: () => _selectEndDate(context),
-                //     //   child: Text("Select End Date"),
-                //     // ),
-                //     Expanded(
-                //       child: DropdownButtonFormField<int>(
-                //         value: _selectedEndDate?.year,
-                //         items: List.generate(101, (index) {
-                //           final year = DateTime.now().year - 50 + index;
-                //           return DropdownMenuItem<int>(
-                //               value: year, child: Text(year.toString()));
-                //         }),
-                //         onChanged: (selectedYear) {
-                //           setState(() {
-                //             _selectedEndDate = DateTime(selectedYear!);
-                //           });
-                //         },
-                //         decoration: InputDecoration(
-                //           border: OutlineInputBorder(
-                //             borderRadius: BorderRadius.circular(12),
-                //           ),
-                //           hintText: "Select End Year",
-                //         ),
-                //         validator: (val) {
-                //           if (val == null) {
-                //             return "Please select end year";
-                //           }
-                //           if (_selectedStartDate != null &&
-                //               val < _selectedEndDate!.year) {
-                //             return "End year should not be less than Start year";
-                //           }
-                //           return null;
-                //         },
-                //       ),
-                //     ),
-                //     // const SizedBox(
-                //     //   height: 15,
-                //     // ),
-                //     Text(_selectedEndDate != null
-                //         ? "End Year: ${DateFormat('yyyy').format(_selectedEndDate!)}"
-                //         : ""),
-                //   ],
-                // ),
 
                 const SizedBox(
                   height: 15,
@@ -574,144 +672,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
       });
     }
   }
-
-  // Scaffold(
-  //   appBar: AppBar(
-  //     title: const Text("Upload Student Data"),
-  //   ),
-  //   body: Center(
-  //     child: Padding(
-  //       padding: const EdgeInsets.all(8.0),
-  //       child: Column(
-  //         mainAxisAlignment: MainAxisAlignment.center,
-  //         children: <Widget>[
-  //           DropdownSearch<String>(
-  //             items: semesterList,
-  //             onChanged: (value) {
-  //               setState(() {
-  //                 selectedSemester = value!;
-  //               });
-  //             },
-  //             selectedItem: selectedSemester,
-  //             dropdownBuilder: (context, selectedItem) {
-  //               return Column(
-  //                 crossAxisAlignment: CrossAxisAlignment.start,
-  //                 children: [
-  //                   InputDecorator(
-  //                     decoration: InputDecoration(
-  //                       hintText:
-  //                           'Select Semester', // Hint text when no item is selected
-  //                       labelText:
-  //                           'Semester', // Label text when an item is selected
-  //                     ),
-  //                     isEmpty: selectedItem == null,
-  //                     child: DropdownButtonHideUnderline(
-  //                       child: Text(selectedItem ?? 'Select Semester'),
-  //                     ),
-  //                   ),
-  //                   // Additional styling if needed
-  //                   const SizedBox(height: 8),
-  //                   const Divider(),
-  //                 ],
-  //               );
-  //             },
-  //           ),
-  //           ElevatedButton(
-  //             onPressed: () async {
-  //               FilePickerResult? result =
-  //                   await FilePicker.platform.pickFiles(
-  //                 type: FileType.custom,
-  //                 allowedExtensions: ['xls', 'xlsx'],
-  //               );
-
-  //               if (result != null &&
-  //                   result.files.isNotEmpty &&
-  //                   result.files.single.bytes != null) {
-  //                 try {
-  //                   final bytes = result.files.single.bytes!;
-  //                   final excel = Excel.decodeBytes(bytes);
-
-  //                   // Assuming your Excel file has a single sheet named 'Sheet1'.
-  //                   final sheet = excel.tables['Sheet1'];
-  //                   // CollectionReference courseRef = FirebaseFirestore.instance
-  //                   //     .collection('students')
-  //                   //     .doc()
-  //                   //     .collection('enrollments');
-  //                   print(
-  //                       "File bytes length: ${result.files.single.bytes?.length}");
-  //                   // Iterate through each row in the sheet and extract enrollment and name.
-  //                   List<Map<String, String>> studentData = [];
-  //                   for (var row in sheet!.rows) {
-  //                     if (row.length >= 3) {
-  //                       String rollno = row[0]?.value ?? '';
-  //                       String enrollment = row[1]?.value ?? '';
-  //                       String name = row[2]?.value ?? '';
-
-  //                       // Print the extracted data to the console.
-  //                       print(
-  //                           'Roll No: $rollno, Enrollment: $enrollment, Name: $name');
-
-  //                       // await courseRef.doc(enrollment).set({
-  //                       //   'rollno': rollno,
-  //                       //   'enrollment': enrollment,
-  //                       //   'name': name,
-  //                       // });
-  //                     }
-  //                   }
-
-  //                   // for (var row in sheet!.rows) {
-  //                   //   if (row[0] != null && row[1] != null && row[2] != null) {
-  //                   //     String rollno =
-  //                   //         row[0]?.value; // Assuming enrollment is in the first column.
-  //                   //     String enrollment = row[1]?.value;
-  //                   //     String name =
-  //                   //         row[2]?.value; // Assuming name is in the second column.
-  //                   //     await courseRef.doc(enrollment).set(
-  //                   //         {'rollno': rollno, 'enrollment': enrollment, 'name': name});
-  //                   //   }
-  //                   // }
-
-  //                   // Now, store the studentData in Firestore under the selected dropdown values.
-  //                   // You'll need to replace 'yourFirestoreCollection' with your actual collection name.
-  //                   // await FirebaseFirestore.instance
-  //                   //     .collection('students')
-  //                   //     .doc(selectedCourse)
-  //                   //     .collection(selectedSemester)
-  //                   //     .doc(selectedDivision)
-  //                   //     .set({
-  //                   //   'name': name, // Store name as a field within the document
-  //                   //   'enrollment':
-  //                   //       enrollment, // Store enrollment as a field within the document
-  //                   // });
-
-  //                   // Show success message to the user
-  //                   showDialog(
-  //                     context: context,
-  //                     builder: (context) => AlertDialog(
-  //                       title: Text("Success"),
-  //                       content: Text("Data uploaded successfully!"),
-  //                     ),
-  //                   );
-  //                 } catch (e) {
-  //                   // Show error message to the user
-  //                   showDialog(
-  //                     context: context,
-  //                     builder: (context) => AlertDialog(
-  //                       title: Text("Error"),
-  //                       content: Text(
-  //                           "An error occurred while uploading the data: \n$e"),
-  //                     ),
-  //                   );
-  //                 }
-  //               }
-  //             },
-  //             child: const Text("Upload Excel File"),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   ),
-  // );
 
   String formatEnrollmentNo(dynamic value) {
     if (value != null) {

@@ -91,17 +91,36 @@ class _ManageFacultyState extends State<ManageFaculty> {
     print(courseId);
     print(courseName);
     try {
-      QuerySnapshot subjectSnapshot = await FirebaseFirestore.instance
-          .collection('subjects')
-          .doc(courseId)
-          .collection(courseName)
+      QuerySnapshot courseSnapshot = await FirebaseFirestore.instance
+          .collection("courses")
+          .where('course_name', isEqualTo: courseName)
           .get();
+      if (courseSnapshot.docs.isNotEmpty) {
+        String courseId = courseSnapshot.docs[0].id;
+        QuerySnapshot subjectSnapshot = await FirebaseFirestore.instance
+            .collection("courses")
+            .doc(courseId)
+            .collection("subjects")
+            .get();
 
-      setState(() {
-        subjectNames = subjectSnapshot.docs
-            .map((doc) => doc['subject_name'] as String)
-            .toList();
-      });
+        setState(() {
+          subjectNames = subjectSnapshot.docs
+              .map((doc) => doc['subject_name'] as String)
+              .toList();
+        });
+      }
+
+      // QuerySnapshot subjectSnapshot = await FirebaseFirestore.instance
+      //     .collection('courses')
+      //     .doc(courseId)
+      //     .collection("subjects")
+      //     .get();
+
+      // setState(() {
+      //   subjectNames = subjectSnapshot.docs
+      //       .map((doc) => doc['subject_name'] as String)
+      //       .toList();
+      // });
       print(subjectNames);
     } catch (e) {
       print(e.toString());
@@ -303,7 +322,7 @@ class _ManageFacultyState extends State<ManageFaculty> {
         [_selectedSubject!],
       );
 
-      // Refresh faculty details if needed
+      // Refresh faculty details
       _loadFacultyDetails();
       setState(() {
         _selectedCourse = null;

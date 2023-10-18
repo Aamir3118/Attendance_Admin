@@ -29,11 +29,35 @@ class _WrapperState extends State<Wrapper> {
                   .doc(adminUid)
                   .get(),
               builder: (ctx, adminDataSnapshot) {
-                if (adminDataSnapshot.hasData &&
+                if (adminDataSnapshot.data != null &&
                     adminDataSnapshot.data!.exists) {
                   print("Admin");
                   return TabsScreen();
                 } else {
+                  //   // Data not found in "Admin" collection, show a dialog.
+                  //   showDialog(
+                  //     context: context,
+                  //     builder: (ctx) => AlertDialog(
+                  //       title: Text('Data Not Found'),
+                  //       content:
+                  //           Text('Data not found in the "Admin" collection.'),
+                  //       actions: <Widget>[
+                  //         TextButton(
+                  //           onPressed: () {
+                  //             Navigator.of(ctx).pop(); // Close the dialog.
+                  //             Navigator.pushReplacement(
+                  //               context,
+                  //               MaterialPageRoute(
+                  //                   builder: (context) => SignInScreen()),
+                  //             ); // Navigate back to SignInScreen.
+                  //           },
+                  //           child: Text('OK'),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   );
+                  //   return Container(); // Return an empty container while showing the dialog.
+                  // }
                   return SignInScreen();
                 }
               });

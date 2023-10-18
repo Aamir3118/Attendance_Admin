@@ -64,7 +64,10 @@ class _EditDivisionState extends State<EditDivision> {
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                  builder: (context) => DivEdit()),
+                                  builder: (context) => DivEdit(
+                                        divName: divList[index]['div_name'],
+                                        divId: divList[index].id,
+                                      )),
                             );
                           },
                         ),
@@ -134,6 +137,29 @@ class _EditDivisionState extends State<EditDivision> {
           .collection('divisions')
           .doc(divId)
           .delete();
+
+      final CollectionReference studentsCollection =
+          FirebaseFirestore.instance.collection("students");
+
+      // Query for students where course_name is equal to the old course name
+      QuerySnapshot studentsQuery =
+          await studentsCollection.where("div_name", isEqualTo: divName).get();
+
+      // Iterate through the students and update their course_name
+      for (QueryDocumentSnapshot studentDoc in studentsQuery.docs) {
+        // delete the course_name field in each student document
+        //await studentDoc.reference.collection("enrollments").doc()
+        // Delete the enrollments subcollection for the student document
+        await studentDoc.reference
+            .collection("enrollments")
+            .get()
+            .then((enrollmentsQuery) {
+          for (QueryDocumentSnapshot enrollmentDoc in enrollmentsQuery.docs) {
+            enrollmentDoc.reference.delete();
+          }
+        });
+        await studentDoc.reference.delete();
+      }
       // await FirebaseFirestore.instance
       //     .collection('subjects')
       //     .doc(courseId)

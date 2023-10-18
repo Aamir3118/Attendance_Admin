@@ -137,12 +137,10 @@ class _SignInScreenState extends State<SignInScreen> {
       var errorMessage = 'Authentication failed!';
       if (error.code == 'wrong-password') {
         errorMessage = 'Invalid password.';
-      } else if (error.code == 'email-already-exists') {
-        errorMessage = 'This email address is already in use.';
-      } else if (error.code == 'invalid-email') {
-        errorMessage = 'This is not a valid email address.';
       } else if (error.code == 'user-not-found') {
         errorMessage = 'Could not find a user with that email.';
+      } else if (error.code == 'invalid-email') {
+        errorMessage = 'This is not a valid email address.';
       }
       _showErrorDialog(errorMessage);
       setState(() {

@@ -3,51 +3,79 @@ import 'package:flutter/material.dart';
 
 import '../widgets/widgets.dart';
 
-class DivEdit extends StatefulWidget {
-  final String divName;
-  final String divId;
-  const DivEdit({super.key, required this.divName, required this.divId});
+class SubjectEdit extends StatefulWidget {
+  final String subName;
+  final String subId;
+  final String courseId;
+  const SubjectEdit(
+      {super.key,
+      required this.subId,
+      required this.subName,
+      required this.courseId});
 
   @override
-  State<DivEdit> createState() => _DivEditState();
+  State<SubjectEdit> createState() => _SubjectEditState();
 }
 
-class _DivEditState extends State<DivEdit> {
+class _SubjectEditState extends State<SubjectEdit> {
   bool isLoading = false;
-  final TextEditingController divController = TextEditingController();
+  final TextEditingController subController = TextEditingController();
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    divController.text = widget.divName;
+    subController.text = widget.subName;
   }
 
   final _formKey = GlobalKey<FormState>();
 
-  Future<void> _updateDivision() async {
+  Future<void> _updateSubject() async {
     FocusManager.instance.primaryFocus?.unfocus();
     if (_formKey.currentState!.validate()) {
       setState(() {
         isLoading = true;
       });
       try {
-        final String newCourse = divController.text;
+        String newSub = subController.text;
 
-        final CollectionReference _div =
-            FirebaseFirestore.instance.collection("divisions");
-        final DocumentReference divDocRef = _div.doc(widget.divId);
-        final CollectionReference studentsCollection =
-            FirebaseFirestore.instance.collection("students");
+        CollectionReference subjectsCollection = FirebaseFirestore.instance
+            .collection('courses')
+            .doc(widget.courseId)
+            .collection('subjects');
 
-        //update course_name in courses collection
-        await divDocRef.update({
-          "div_name": divController.text,
-        });
-        QuerySnapshot studQuery = await studentsCollection
-            .where("div_name", isEqualTo: widget.divName)
+        QuerySnapshot subjectsSnapshot = await subjectsCollection
+            .where("subject_name", isEqualTo: widget.subName)
             .get();
-        for (QueryDocumentSnapshot studentDoc in studQuery.docs) {
-          await studentDoc.reference.update({"div_name": newCourse});
+
+        if (subjectsSnapshot.docs.isNotEmpty) {
+          await subjectsSnapshot.docs.first.reference
+              .update({"subject_name": newSub});
+        }
+        // for (QueryDocumentSnapshot subjectDoc in subjectsSnapshot.docs) {
+        //   // Delete each subject document within the subjects subcollection
+        //   await subjectDoc.reference.delete();
+        // }
+        CollectionReference facultiesCollection =
+            FirebaseFirestore.instance.collection("faculties");
+        QuerySnapshot facultiesQuery = await facultiesCollection.get();
+        for (QueryDocumentSnapshot facultyDoc in facultiesQuery.docs) {
+          if (facultyDoc.exists) {
+            Map<String, dynamic>? facultyData =
+                facultyDoc.data() as Map<String, dynamic>?;
+            if (facultyData != null) {
+              List<dynamic> subjectsArray = facultyData['subjects'];
+              List<String> subjectsName = List<String>.from(subjectsArray);
+              if (subjectsName.contains(widget.subName)) {
+                //replacing the old with new one
+                int index = subjectsName.indexOf(widget.subName);
+                subjectsName[index] = newSub;
+                await facultiesCollection
+                    .doc(facultyDoc.id)
+                    .update({'subjects': subjectsName});
+              }
+            }
+            //dynamic subjectsArray = facultyDoc.data()['subjects'];
+          }
         }
         setState(() {
           isLoading = false;
@@ -56,10 +84,12 @@ class _DivEditState extends State<DivEdit> {
           context: context,
           builder: (context) => AlertDialog(
             title: Text("Success"),
-            content: Text("Division edited successfully."),
+            content: Text("Subject edited successfully."),
           ),
         );
-      } catch (e) {}
+      } catch (e) {
+        print(e);
+      }
     }
   }
 
@@ -67,11 +97,10 @@ class _DivEditState extends State<DivEdit> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Edit Division",
+        title: Text(
+          "Edit Subject",
           style: TextStyle(color: Colors.white),
         ),
-        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -87,7 +116,7 @@ class _DivEditState extends State<DivEdit> {
             Form(
               key: _formKey,
               child: TextFormField(
-                controller: divController,
+                controller: subController,
 
                 //initialValue: widget.courseName,
                 // onChanged: (value) {
@@ -97,12 +126,12 @@ class _DivEditState extends State<DivEdit> {
                   "",
                   context,
                   false,
-                  divController,
-                  Icons.book,
+                  subController,
+                  Icons.subject,
                 ),
                 validator: (value) {
                   if (value!.isEmpty) {
-                    return 'Please enter division';
+                    return 'Please enter subject';
                   }
                   return null;
                 },
@@ -114,7 +143,7 @@ class _DivEditState extends State<DivEdit> {
             // CustomWidgets.loginButton(
             //     context, _updatecourse, isLoading, "Update Course"),
             InkWell(
-              onTap: _updateDivision,
+              onTap: _updateSubject,
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -128,8 +157,8 @@ class _DivEditState extends State<DivEdit> {
                         ? const CircularProgressIndicator(
                             color: Colors.white,
                           )
-                        : Text(
-                            "Update Division",
+                        : const Text(
+                            "Update Subject",
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 22,

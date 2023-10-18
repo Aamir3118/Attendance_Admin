@@ -45,6 +45,7 @@ dependencies:
   open_file: ^3.3.1
   firebase_admin: ^0.2.0
   flutter_native_splash: ^2.3.2
+  http: ^0.13.5
 
 dev_dependencies:
   flutter_test:
